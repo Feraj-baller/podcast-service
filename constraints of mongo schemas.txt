@@ -111,3 +111,176 @@ def delete_item(request, pk):
 | `NUMERIC`          | `models.DecimalField(...)` or `models.BooleanField()`      | For precision decimals or booleans |
 | `BLOB`             | `models.BinaryField()`                                     | For raw binary data                |
 | `DATE`, `DATETIME` | `models.DateField()`, `models.DateTimeField()`             | Auto timestamps possible           |
+
+
+
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from rest_framework import status
+from django.forms.models import model_to_dict
+from django.core.exceptions import ValidationError
+from .models import Task
+import json
+
+@api_view(['GET'])
+def get_all_items(request):
+    tasks = Task.objects.all()
+    # Convert QuerySet to list of dictionaries
+    task_list = [model_to_dict(task) for task in tasks]
+    return Response({'tasks': task_list}, status=200)
+
+@api_view(['POST'])
+def create_item(request):
+    try:
+        # Manual validation and creation
+        title = request.data.get('title')
+        description = request.data.get('description', '')
+        completed = request.data.get('completed', False)
+        
+        # Basic validation
+        if not title:
+            return Response({'error': 'Title is required'}, status=400)
+        
+        # Create the task
+        task = Task.objects.create(
+            title=title,
+            description=description,
+            completed=completed
+        )
+        
+        return Response({'task': model_to_dict(task)}, status=201)
+    
+    except Exception as e:
+        return Response({'error': str(e)}, status=400)
+
+@api_view(['GET'])
+def get_single_item(request, pk):
+    try:
+        task = Task.objects.get(id=pk)
+        return Response({'task': model_to_dict(task)}, status=200)
+    except Task.DoesNotExist:
+        return Response({'msg': f'No task with id: {pk}'}, status=404)
+
+@api_view(['PUT', 'PATCH'])
+def update_item(request, pk):
+    try:
+        task = Task.objects.get(id=pk)
+    except Task.DoesNotExist:
+        return Response({'msg': f'Resource of id {pk} not available'}, status=404)
+    
+    try:
+        # Update fields if provided
+        if 'title' in request.data:
+            task.title = request.data['title']
+        if 'description' in request.data:
+            task.description = request.data['description']
+        if 'completed' in request.data:
+            task.completed = request.data['completed']
+        
+        # Validate and save
+        task.full_clean()  # This runs model validation
+        task.save()
+        
+        return Response({'task': model_to_dict(task)}, status=200)
+    
+    except ValidationError as e:
+        return Response({'errors': e.message_dict}, status=400)
+    except Exception as e:
+        return Response({'error': str(e)}, status=400)
+
+@api_view(['DELETE'])
+def delete_item(request, pk):
+    try:
+        task = Task.objects.get(id=pk)
+        task.delete()
+        return Response({'msg': f'Task with id {pk} deleted'}, status=200)
+    except Task.DoesNotExist:
+        return Response({'msg': f'Resource of id {pk} not available'}, status=404)
+
+
+
+
+class TaskAPIView(APIView):
+    """
+    Handle GET (list all) and POST (create) for tasks
+    """
+    
+    def get(self, request):
+        tasks = Task.objects.all()
+        task_list = [model_to_dict(task) for task in tasks]
+        return Response({'tasks': task_list}, status=200)
+    
+    def post(self, request):
+        try:
+            title = request.data.get('title')
+            description = request.data.get('description', '')
+            completed = request.data.get('completed', False)
+            
+            if not title:
+                return Response({'error': 'Title is required'}, status=400)
+            
+            task = Task.objects.create(
+                title=title,
+                description=description,
+                completed=completed
+            )
+            
+            return Response({'task': model_to_dict(task)}, status=201)
+        
+        except Exception as e:
+            return Response({'error': str(e)}, status=400)
+
+class TaskDetailAPIView(APIView):
+    """
+    Handle GET (single), PUT/PATCH (update), and DELETE for a specific task
+    """
+    
+    def get_object(self, pk):
+        try:
+            return Task.objects.get(pk=pk)
+        except Task.DoesNotExist:
+            return None
+    
+    def get(self, request, pk):
+        task = self.get_object(pk)
+        if not task:
+            return Response({'msg': f'No task with id: {pk}'}, status=404)
+        
+        return Response({'task': model_to_dict(task)}, status=200)
+    
+    def put(self, request, pk):
+        return self._update(request, pk)
+    
+    def patch(self, request, pk):
+        return self._update(request, pk)
+    
+    def _update(self, request, pk):
+        task = self.get_object(pk)
+        if not task:
+            return Response({'msg': f'Resource of id {pk} not available'}, status=404)
+        
+        try:
+            if 'title' in request.data:
+                task.title = request.data['title']
+            if 'description' in request.data:
+                task.description = request.data['description']
+            if 'completed' in request.data:
+                task.completed = request.data['completed']
+            
+            task.full_clean()
+            task.save()
+            
+            return Response({'task': model_to_dict(task)}, status=200)
+        
+        except ValidationError as e:
+            return Response({'errors': e.message_dict}, status=400)
+        except Exception as e:
+            return Response({'error': str(e)}, status=400)
+    
+    def delete(self, request, pk):
+        task = self.get_object(pk)
+        if not task:
+            return Response({'msg': f'Resource of id {pk} not available'}, status=404)
+        
+        task.delete()
+        return Response({'msg': f'Task with id {pk} deleted'}, status=200)

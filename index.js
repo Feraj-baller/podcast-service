@@ -1,23 +1,23 @@
 const express = require("express")
 const {NotFoundError, ServerError} = require("./middleware/error-handler")
 const connectDB = require("./db/connect")
-const form = require("./routes/form")
+const route = require("./routes/route")
 
 require("dotenv").config()
+
+
 const app = express()
 
 
 app.use(express.json())
+app.use(express.urlencoded({ extended: true }))
+
 
 // port number
 app.set("port", process.env.PORT || 3000)
 
 
-app.get("/",(req,res)=>{
-    res.send("<h1>Homepage</h1>")
-})
-
-app.use("/", form)
+app.use("/api/v1", route)
 
 
 const start = async ()=>{
@@ -40,8 +40,7 @@ start()
 
 // error-handling middleware
 app.use(NotFoundError);
-app.use(ServerError)
-
+app.use(ServerError);
 
 
 

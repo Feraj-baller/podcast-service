@@ -1,2 +1,50 @@
-/node-modules
+# Node.js dependencies
+/node_modules
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# dotenv environment files
 .env
+.env.*        # e.g., .env.development, .env.production
+
+# Coverage directory (e.g., Jest tests)
+coverage
+
+# Build / cache files
+/dist
+/build
+/.next
+/.nuxt
+/.cache
+
+# IDE / editor stuff
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Optional: lock files if using a single package manager
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml

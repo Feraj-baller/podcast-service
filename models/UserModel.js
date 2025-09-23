@@ -18,7 +18,14 @@ const UserSchema = new mongoose.Schema({
         required: true,
         trim: true,
         maxlength: 100
+    }, 
+    is_admin:{
+        type: Boolean, 
+        required: false, 
+        default : false,
+        maxlength: 10
     }
 })
+
 
 module.exports = mongoose.model("User", UserSchema)
