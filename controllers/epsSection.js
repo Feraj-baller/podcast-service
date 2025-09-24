@@ -1,4 +1,4 @@
-const { Category, Episode, Comment } = require("../models/EpisodeModel")
+const { Category, Episode, EpisodeComment } = require("../models/EpisodeModel")
 
 
 const createCategory = async (req,res) => {
@@ -24,6 +24,19 @@ const createCategory = async (req,res) => {
     }
 }
 
+
+const getCategories = async (req, res) => {
+  try {
+    const categories = await Category.find()
+    res.json({ 
+        success: true, 
+        count: categories.length, 
+        data: categories
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+}
 
 const createEpisode = async (req,res) => {
     const { title, description, tags, audioUrl, externalLinks, categoryId  } = req.body
@@ -114,7 +127,6 @@ const deleteEpisode = async (req,res) => {
 // SPECIFIC TO USERS
 // GET /api/v1/episodes
 
-// 1. Get all episodes
 const getEpisodes = async (req, res) => {
   try {
     const { categoryId, name } = req.query;
@@ -149,7 +161,7 @@ const getEpisodes = async (req, res) => {
   }
 };
 
-// 2. Get single episode (with comments)
+
 const getEpisodeById = async (req, res) => {
   try {
     const episode = await Episode.findById(req.params.id)
@@ -170,7 +182,7 @@ const getEpisodeById = async (req, res) => {
   }
 };
 
-// 3. Add a comment to an episode
+
 const addEpisodeComment = async (req, res) => {
   try {
     const { text } = req.body;
@@ -183,9 +195,9 @@ const addEpisodeComment = async (req, res) => {
       return res.status(404).json({ success: false, message: "Episode not found" });
     }
 
-    const comment = await Comment.create({
+    const comment = await EpisodeComment.create({
       text,
-      user: req.user.id,   // req.user comes from your auth middleware
+      user: req.user.id,   
       episode: episode._id
     });
 
@@ -200,4 +212,4 @@ const addEpisodeComment = async (req, res) => {
 
 
 
-module.exports = { createCategory, createEpisode, updateEpisode, deleteEpisode, getEpisodes, getEpisodeById, addEpisodeComment}
+module.exports = { createCategory, getCategories, createEpisode, updateEpisode, deleteEpisode, getEpisodes, getEpisodeById, addEpisodeComment}

@@ -76,6 +76,6 @@ const CommentSchema = new mongoose.Schema(
 
 const Category = mongoose.model("Category", CategorySchema);
 const Episode = mongoose.model("Episode", EpisodeSchema);
-const Comment = mongoose.model("Comment", CommentSchema);
+const EpisodeComment = mongoose.model("Episode-Comment", CommentSchema);
 
-module.exports = { Category, Episode, Comment };
+module.exports = { Category, Episode, EpisodeComment };
