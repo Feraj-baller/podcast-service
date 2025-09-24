@@ -1,6 +1,6 @@
 const { login, register, authenticateToken, requestPasswordReset, resetPassword, logout,  refreshToken } = require("../controllers/auth")
 const {  getSingleUser, updateUser, verifyEmailChange, deleteUser, getAllUsers  } = require("../controllers/userSection")
-const { createCategory, createEpisode, updateEpisode, deleteEpisode } = require("../controllers/epsSection")
+const { createCategory, createEpisode, updateEpisode, deleteEpisode, getEpisodes, getEpisodeById, addEpisodeComment } = require("../controllers/epsSection")
 const { isAdmin } = require("../middleware/isAdmin")
 const { authorizeUserOrAdmin } = require("../middleware/authorizeUserOrAdmin")
 const express = require("express")
@@ -43,6 +43,10 @@ router.post("/admin/create-category", authenticateToken, isAdmin, createCategory
 router.post("/admin/create-episode", authenticateToken, isAdmin, createEpisode)
 router.put("/admin/update-episode/:id", authenticateToken, isAdmin, updateEpisode)
 router.delete("/admin/delete-episode/:id", authenticateToken, isAdmin, deleteEpisode)
+//Specific to users
+router.get("/episodes", authenticateToken, authorizeUserOrAdmin, getEpisodes)              
+router.get("/episode/:id", authenticateToken, authorizeUserOrAdmin, getEpisodeById)      
+router.post("/episode/:id/comments", authenticateToken, authorizeUserOrAdmin, addEpisodeComment)
 
 console.log(createCategory, createEpisode, updateEpisode)
 

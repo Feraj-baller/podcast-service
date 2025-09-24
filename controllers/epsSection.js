@@ -1,16 +1,8 @@
-const { Category, Episode } = require("../models/EpisodeModel")
+const { Category, Episode, Comment } = require("../models/EpisodeModel")
 
 
 const createCategory = async (req,res) => {
     const { name, description } = req.body
-
-    const categoryExists = Category.findOne(name)
-
-    if (categoryExists){
-        return res.status(200).json({
-            message: "This category exists!"
-        })
-    }
     try{
         const category = {
             name : name,
@@ -24,6 +16,7 @@ const createCategory = async (req,res) => {
             category: createdCategory
         })
 
+        
     }catch(err){
         res.status(500).json({
             message : err
@@ -34,6 +27,8 @@ const createCategory = async (req,res) => {
 
 const createEpisode = async (req,res) => {
     const { title, description, tags, audioUrl, externalLinks, categoryId  } = req.body
+
+    
     try{
         const episode = {
             title : title,
@@ -60,58 +55,149 @@ const createEpisode = async (req,res) => {
     }
 }
 
-const updateEpisode = async (req,res) => {
-    const { id } = req.params
-    const { title, description, tags, audioUrl, externalLinks  } = req.body
+const updateEpisode = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
 
+    // Find and update episode
+    const episode = await Episode.findByIdAndUpdate(id, updates, { 
+      new: true,         
+      runValidators: true 
+    });
 
-    try{
-        const episode = await Episode.findById(id)
-        if (!title || !description || !tags || !audioUrl || !externalLinks){
-            // no operation is needed
-        }
-        episode.title = title
-        episode.description = description
-        episode.tags = tags
-        episode.audioUrl = audioUrl
-        episode.externalLinks = externalLinks
-
-        return res.status(200).json({
-            success : True,
-            message : "Successfully updated",
-            Ep: episode
-        })
-
-    }catch(err){
-        res.status(500).json({
-            message : err
-        })
+    if (!episode) {
+      return res.status(404).json({
+        success: false,
+        message: "Episode not found"
+      });
     }
-    
-}
+
+    return res.status(200).json({
+      success: true,
+      message: "Episode successfully updated",
+      episode
+    });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: err.message
+    });
+  }
+};
+
 
 const deleteEpisode = async (req,res) => {
     const { id } = req.params
-    const episode = Episode.findOneAndDelete(id)
+    const episode = await Episode.findOneAndDelete({_id : id})
     try {
         if (!episode){
-            return res.status(403).json({
-                message: "Invalid token/id"
+            return res.status(404).json({
+                message: "Episode not found"
             })}
 
         return res.status(200).json({
-            status : True,
+            success : true,
             message : "Episode successfully deleted!",
             episode: episode
         })
     }catch(err){
         res.status(500).json({
             message: "Server error", 
-            error : error.message
+            error : err.message
         })
     }
 }
 
 
+// SPECIFIC TO USERS
+// GET /api/v1/episodes
 
-module.exports = { createCategory, createEpisode, updateEpisode, deleteEpisode}
+// 1. Get all episodes
+const getEpisodes = async (req, res) => {
+  try {
+    const { categoryId, name } = req.query;
+    let filter = {};
+
+    // filter by categoryId if provided
+    if (categoryId) {
+      filter.categoryId = categoryId;
+    }
+
+    // filter by categoryName if provided
+    if (name) {
+      const category = await Category.findOne({ name: name });
+
+      if (categoryId & categoryId != category.id){
+        return res.status(404).json("Mismatched queries")
+      }
+      if (category) {
+        filter.categoryId = category._id;
+      } else {
+        return res.status(404).json({ success: false, message: "Category not found" });
+      }
+    }
+
+    const episodes = await Episode.find(filter)
+      .populate("categoryId", "name description")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({ success: true, data: episodes });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// 2. Get single episode (with comments)
+const getEpisodeById = async (req, res) => {
+  try {
+    const episode = await Episode.findById(req.params.id)
+      .populate("categoryId", "name description");
+
+    if (!episode) {
+      return res.status(404).json({ success: false, message: "Episode not found" });
+    }
+
+    // fetch comments separately
+    const comments = await Comment.find({ episode: episode._id })
+      .populate("user", "fullname email")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({ success: true, data: { episode, comments } });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// 3. Add a comment to an episode
+const addEpisodeComment = async (req, res) => {
+  try {
+    const { text } = req.body;
+    if (!text) {
+      return res.status(400).json({ success: false, message: "Comment text is required" });
+    }
+
+    const episode = await Episode.findById(req.params.id);
+    if (!episode) {
+      return res.status(404).json({ success: false, message: "Episode not found" });
+    }
+
+    const comment = await Comment.create({
+      text,
+      user: req.user.id,   // req.user comes from your auth middleware
+      episode: episode._id
+    });
+
+    await comment.populate("user", "fullname email");
+
+    res.status(201).json({ success: true, data: comment });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+
+
+
+module.exports = { createCategory, createEpisode, updateEpisode, deleteEpisode, getEpisodes, getEpisodeById, addEpisodeComment}
